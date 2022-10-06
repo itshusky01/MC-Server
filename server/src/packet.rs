@@ -4,10 +4,12 @@ use log::info;
 
 use std::io::{Result, Error, ErrorKind};
 
+use crate::reader::BinaryReader;
+
 pub enum Packet {
     LegacyPing(),
 
-    Handshake(),
+    Handshake { version: i32 },
     SLP(),
     Ping(),
     Unknown()
@@ -17,17 +19,27 @@ impl Packet {
     pub fn parse(bytes: Vec<u8>) -> Self {
         let id = bytes[0];
         // info!("len: {}", bytes.len());
+        let data: Vec<u8> = bytes[1..].to_vec();
 
-        match id {
+        return match id {
             0x00 => {
                 if bytes.len() == 1 {
                     Packet::SLP()
                 } else {
-                    Packet::Handshake()
+                    let mut reader = BinaryReader::new(bytes);
+                    let mut ver: i32 = 0;
+                    match reader.read_varint() {
+                        Err(e) => return Packet::Unknown(),
+                        Ok(v) => ver = v,
+                    }
+                    info!("{}", ver);
+                    Packet::Handshake { version: 0 }
                 }
             },
             _ => Packet::Unknown()
-        }
+        };
+
+        Packet::Unknown();
     }
 }
 
