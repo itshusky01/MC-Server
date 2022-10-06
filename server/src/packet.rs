@@ -16,7 +16,7 @@ pub enum Packet {
 impl Packet {
     pub fn parse(bytes: Vec<u8>) -> Self {
         let id = bytes[0];
-        info!("len: {}", bytes.len());
+        // info!("len: {}", bytes.len());
 
         match id {
             0x00 => {
@@ -26,9 +26,7 @@ impl Packet {
                     Packet::Handshake()
                 }
             },
-            default => {
-                Packet::Unknown()
-            }
+            _ => Packet::Unknown()
         }
     }
 }

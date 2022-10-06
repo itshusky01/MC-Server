@@ -1,10 +1,8 @@
-use async_std::io::ReadExt;
 use async_std::net::{TcpListener, TcpStream};
 
 use futures::AsyncWriteExt;
 use futures::stream::StreamExt;
 
-use std::default;
 use std::io::{Result, Error, ErrorKind};
 use log::{info, warn, error};
 
@@ -46,9 +44,11 @@ impl Server{
                 match stream {
                     Err(err) => error!("{}", err),
                     Ok(mut v) => { 
-                        if let Err(e) = self.handle(&mut v).await {
+                        if let Err(_) = self.handle(&mut v).await {
                             // error!("{}", e);
-                            v.close().await;
+                            if let Err(_) = v.close().await {
+                                // Huh? NOPE
+                            }
                         }
                     }
                 }
@@ -61,11 +61,13 @@ impl Server{
         match stream.read_packet().await {
             Err(e) => return Err(e),
             Ok(packet) => {
-                    if let Packet::SLP() = packet {
-                        // Server List Ping
-                    } else if let Packet::Unknown() = packet {
-                        return Err(Error::new(ErrorKind::Other, "Unknown Packet ID"));
-                    }
+                if let Packet::SLP() = packet {
+                    // Server List Ping
+                } else if let Packet::LegacyPing() = packet {
+                    info!("legacy ping");
+                } else if let Packet::Unknown() = packet {
+                    return Err(Error::new(ErrorKind::Other, "Unknown Packet ID"));
+                }
             }
         }
         

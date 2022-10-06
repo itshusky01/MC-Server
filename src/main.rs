@@ -14,7 +14,7 @@ use server::{config::StartupConfig, server::Server};
 
 const CONFIG: &str = 
 "name = 'My Server!'
-address = '127.0.0.1:2333'
+address = '0.0.0.0:2333'
 max_players = 20
 log_dir = './logs'
 ext_dir = './exts'";
