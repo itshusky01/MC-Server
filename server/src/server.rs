@@ -4,6 +4,7 @@ use async_std::net::{TcpListener, TcpStream};
 use futures::AsyncWriteExt;
 use futures::stream::StreamExt;
 
+use std::default;
 use std::io::{Result, Error, ErrorKind};
 use log::{info, warn, error};
 
@@ -60,9 +61,11 @@ impl Server{
         match stream.read_packet().await {
             Err(e) => return Err(e),
             Ok(packet) => {
-                if let Packet::SLP() = packet {
-                    // Server List Ping
-                }
+                    if let Packet::SLP() = packet {
+                        // Server List Ping
+                    } else if let Packet::Unknown() = packet {
+                        return Err(Error::new(ErrorKind::Other, "Unknown Packet ID"));
+                    }
             }
         }
         
