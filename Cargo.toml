@@ -1,0 +1,29 @@
+[package]
+name = "mc_server"
+version = "0.1.0"
+authors = ["ItsHusky01 <itshusky01@outlook.com>"]
+edition = "2021"
+
+[workspace.package]
+edition = "2021"
+
+[workspace]
+members = [
+    "server",
+    "extension"
+]
+
+[workspace.dependencies]
+server = { path = "./server" }
+
+[dependencies]
+server = { workspace = true }
+futures = "*"
+async-std = { version = "1.6", features = ["attributes"] }
+log4rs = "*"
+log = "*"
+chrono = "*"
+
+[[bin]]
+name = "serve"
+path = "src/main.rs"

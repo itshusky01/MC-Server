@@ -1,0 +1,7 @@
+[package]
+name = "minecraft"
+version = "0.1.0"
+authors = ["ItsHusky01 <itshusky01@outlook.com>"]
+edition = "2021"
+
+[dependencies]
