@@ -4,7 +4,7 @@ extern crate log4rs;
 use log::{LevelFilter, error, info, warn};
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::file::FileAppender;
-use log4rs::encode::pattern::PatternEncoder;
+use log4rs::encode::{pattern::PatternEncoder, json::JsonEncoder, Color};
 use log4rs::config::{Appender, Config, Logger, Root};
 use chrono::Local;
 
@@ -14,12 +14,12 @@ use server::{config::StartupConfig, server::Server};
 
 const CONFIG: &str = 
 "name = 'My Server!'
-address = '0.0.0.0:2333'
+address = '0.0.0.0:25565'
 max_players = 20
 log_dir = './logs'
 ext_dir = './exts'";
 
-const LOG_FORMAT: &str = "[{d}][{l}] {m}{n}";
+const LOG_FORMAT: &str = "{h([{d(%Y-%m-%d %H:%M:%S)(utc)}][{l}] {m}{n})}";
 
 #[async_std::main]
 async fn main() {
@@ -28,7 +28,7 @@ async fn main() {
         .build();
 
     let file = FileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new(LOG_FORMAT)))
+        .encoder(Box::new(PatternEncoder::new(LOG_FORMAT))).encoder(Box::new(JsonEncoder::new()))
         .build(format!("logs/{}.log", Local::now().timestamp_millis()))
         .unwrap();
 
@@ -37,7 +37,7 @@ async fn main() {
         .appender(Appender::builder().build("file", Box::new(file)))
         .logger(Logger::builder()
             .appender("file")
-            .additive(false)
+            .additive(true)
             .build("app", LevelFilter::Info))
         .build(Root::builder().appender("stdout").build(LevelFilter::Info))
         .unwrap();

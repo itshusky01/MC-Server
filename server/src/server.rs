@@ -1,14 +1,21 @@
+use async_std::io::{ReadExt, Read, Write};
 use async_std::net::{TcpListener, TcpStream};
 
+use async_trait::async_trait;
 use futures::AsyncWriteExt;
 use futures::stream::StreamExt;
+use minecraft::protocol::handshake::*;
+use minecraft::protocol::ping::ResponsePacket;
+use minecraft::protocol::response::PacketSerializable;
 
 use std::io::{Result, Error, ErrorKind};
 use log::{info, warn, error};
 
-use crate::packet::*;
+use crate::net::Connection;
 use crate::session::Session;
 use crate::config::StartupConfig;
+
+use minecraft::protocol::packet::*;
 
 pub struct Server {
     listener: TcpListener,
@@ -43,34 +50,54 @@ impl Server{
             .for_each_concurrent(None, |stream| async move {
                 match stream {
                     Err(err) => error!("{}", err),
-                    Ok(mut v) => { 
-                        if let Err(_) = self.handle(&mut v).await {
-                            // error!("{}", e);
-                            if let Err(_) = v.close().await {
-                                // Huh? NOPE
-                            }
+                    Ok(v) => { 
+                        let conn = Connection::new(v);
+                        if let Err(e) = self.incoming(conn).await {
+                            error!("{}", e);
                         }
                     }
                 }
             }).await;
     }
 
-    async fn handle(&self, stream: &mut TcpStream) -> Result<()> {
-        info!("Got a connection from {}", stream.peer_addr().unwrap().to_string());
+    async fn incoming(&self, mut conn: Connection) -> Result<()> {
+        info!("Got a connection from {}", conn.stream.peer_addr().unwrap().to_string());
         
-        match stream.read_packet().await {
+        let packet;
+        match conn.read_packet() {
             Err(e) => return Err(e),
-            Ok(packet) => {
-                if let Packet::SLP() = packet {
-                    // Server List Ping
-                } else if let Packet::LegacyPing() = packet {
-                    info!("legacy ping");
-                } else if let Packet::Unknown() = packet {
-                    return Err(Error::new(ErrorKind::Other, "Unknown Packet ID"));
+            Ok(v) => packet = v
+        }
+
+        let handshake;
+        match Handshake::parse(&packet) {
+            Err(e) => return Err(e),
+            Ok(v) => handshake = v
+        }
+
+        info!("{:?}", handshake);
+        match handshake.status {
+            HandshakeStatus::Status => self.slp_handle(conn),
+            HandshakeStatus::Login => todo!(),
+        };
+
+        Ok(())
+    }
+
+    fn slp_handle(&self, mut conn: Connection) {
+        for _ in 0..2  {
+            if let Ok(p) = conn.read_packet() {
+                match p.id {
+                    0x00 => {
+                        info!("SLP");
+                    },
+                    0x01 => {
+                        let res = ResponsePacket::Pong { payload: 0 };
+                        conn.write_packet(res);
+                    },
+                    _ => {}
                 }
             }
         }
-        
-        Ok(())
     }
 }

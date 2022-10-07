@@ -1,6 +1,5 @@
 pub mod server;
 pub mod config;
 
-mod packet;
+pub mod net;
 mod session;
-mod reader;

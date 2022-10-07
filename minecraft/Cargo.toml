@@ -5,3 +5,7 @@ authors = ["ItsHusky01 <itshusky01@outlook.com>"]
 edition = "2021"
 
 [dependencies]
+log = "*"
+serde = "*"
+serde_derive = "*"
+serde_json = "*"

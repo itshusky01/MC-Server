@@ -1,9 +1,14 @@
-use async_std::net::TcpStream;
 
 pub struct Session {
-    stream: TcpStream 
+    
 }
 
 impl Session {
+    pub fn new() {
 
+    }
+
+    pub async fn handle() {
+        
+    }
 }
