@@ -1,5 +1,4 @@
-pub mod packet;
-pub mod response;
+pub mod server;
+pub mod client;
 
-pub mod ping;
-pub mod handshake;
+pub mod common;

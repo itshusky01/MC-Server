@@ -11,5 +11,13 @@ serde_derive = "*"
 toml = "*"
 log = "*"
 futures = "*"
-async-std = { version = "1.6", features = ["attributes"] }
+async-std = "*"
 async-trait = "*"
+
+[dependencies.uuid]
+version = "1.2.1"
+features = [
+    "v4",
+    "fast-rng",
+    "macro-diagnostics",
+]

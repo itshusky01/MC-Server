@@ -1,46 +1,34 @@
-use async_std::io::{ReadExt, Read, Write};
-use async_std::net::{TcpListener, TcpStream};
-
-use async_trait::async_trait;
-use futures::AsyncWriteExt;
+use async_std::net::{TcpListener};
 use futures::stream::StreamExt;
-use minecraft::protocol::handshake::*;
-use minecraft::protocol::ping::ResponsePacket;
-use minecraft::protocol::response::PacketSerializable;
+use minecraft::chat::message::Message;
+use minecraft::protocol::common::*;
+use std::io::{Result};
+use log::{error};
 
-use std::io::{Result, Error, ErrorKind};
-use log::{info, warn, error};
-
-use crate::net::Connection;
-use crate::session::Session;
+use crate::conn::Connection;
+use crate::session::{Session, SessionManager};
 use crate::config::StartupConfig;
-
-use minecraft::protocol::packet::*;
 
 pub struct Server {
     listener: TcpListener,
-    sessions: Vec<Session>,
-
-    name: String,
-    version: String,
+    session_manager: Option<SessionManager>,
 
     max_players: i32,
+    online_mode: bool,
 }
 
 impl Server{
-    pub async fn new(config: StartupConfig) -> Result<Self> {
-        let listener = TcpListener::bind(config.address.clone()).await;
-        return match listener {
-            Err(err) => Err(err),
-            Ok(v) => Ok(Self {
-                listener: v,
-                sessions: Vec::new(),
-    
-                name: config.name.clone(),
-                version: String::from("1.12.2"),
-                max_players: config.max_players
-            })
-        }
+    pub async fn new(config: StartupConfig) -> Result<Server> {
+        let listener = TcpListener::bind(config.address.clone()).await?;
+        let mut server = Self {
+            listener,
+            max_players: config.max_players,
+            online_mode: false,
+            session_manager: None,
+        };
+
+        server.session_manager = Some(SessionManager::new(config.max_players, &server));
+        Ok(server)
     }
 
     pub async fn run(&self) {
@@ -51,53 +39,32 @@ impl Server{
                 match stream {
                     Err(err) => error!("{}", err),
                     Ok(v) => { 
-                        let conn = Connection::new(v);
-                        if let Err(e) = self.incoming(conn).await {
-                            error!("{}", e);
-                        }
+                        if let Err(e) = Session::new(Connection::new(v), self) {}
                     }
                 }
             }).await;
     }
 
-    async fn incoming(&self, mut conn: Connection) -> Result<()> {
-        info!("Got a connection from {}", conn.stream.peer_addr().unwrap().to_string());
-        
-        let packet;
-        match conn.read_packet() {
-            Err(e) => return Err(e),
-            Ok(v) => packet = v
-        }
-
-        let handshake;
-        match Handshake::parse(&packet) {
-            Err(e) => return Err(e),
-            Ok(v) => handshake = v
-        }
-
-        info!("{:?}", handshake);
-        match handshake.status {
-            HandshakeStatus::Status => self.slp_handle(conn),
-            HandshakeStatus::Login => todo!(),
-        };
-
-        Ok(())
+    pub fn online_mode(&self) -> bool {
+        self.online_mode
     }
-
-    fn slp_handle(&self, mut conn: Connection) {
-        for _ in 0..2  {
-            if let Ok(p) = conn.read_packet() {
-                match p.id {
-                    0x00 => {
-                        info!("SLP");
-                    },
-                    0x01 => {
-                        let res = ResponsePacket::Pong { payload: 0 };
-                        conn.write_packet(res);
-                    },
-                    _ => {}
-                }
-            }
+    
+    pub fn ping(&self) -> ServerListPing {
+        ServerListPing {
+            version: ServerListPingVersion {
+                name: String::from("1.12.2"),
+                protocol: 340,
+            },
+            players: ServerListPingPlayers {
+                max: 1024,
+                online: 1023,
+                sample: Vec::new(),
+            },
+            description:Message {
+                text: String::from("This is a Minecraft server")
+            },
+            favicon: String::from("data:image/png;base64,<data>"),
+            previewsChat: true
         }
     }
 }

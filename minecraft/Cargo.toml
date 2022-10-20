@@ -9,3 +9,11 @@ log = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
+
+[dependencies.uuid]
+version = "1.2.1"
+features = [
+    "v4",
+    "fast-rng",
+    "macro-diagnostics",
+]
